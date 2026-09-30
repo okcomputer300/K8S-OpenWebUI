@@ -1,0 +1,41 @@
+---
+stages:
+  - lint
+  - validate
+
+yaml-lint:
+  stage: lint
+  image: python:3.13-alpine
+  before_script:
+    - pip install --no-cache-dir yamllint==1.37.1
+  script:
+    - yamllint -c .yamllint.yml .
+
+validate-k8s:
+  stage: validate
+  image: alpine:3.22
+  variables:
+    KUSTOMIZE_VERSION: "5.6.0"
+    KUBECONFORM_VERSION: "0.7.0"
+  before_script:
+    - apk add --no-cache curl tar
+    - >
+      curl -sSL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+      | tar -xz -C /usr/local/bin kustomize
+    - >
+      curl -sSL "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+      | tar -xz -C /usr/local/bin kubeconform
+  script:
+    - |
+      set -e
+      CRD_SCHEMAS='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+      # -ignore-missing-schemas: nur fuer CRDs ohne veroeffentlichtes Schema (z. B. ListenerSet);
+      # in der Summary steht, wie viele Ressourcen uebersprungen wurden.
+      for dir in apps/openwebui/overlays/production infra/envoy-gateway infra/sealed-secrets infra/cert-manager; do
+        echo "== $dir"
+        kustomize build "$dir" | kubeconform -strict -summary -ignore-missing-schemas \
+          -schema-location default -schema-location "$CRD_SCHEMAS"
+      done
+      echo "== argocd"
+      kubeconform -strict -summary -ignore-missing-schemas \
+        -schema-location default -schema-location "$CRD_SCHEMAS" argocd/root.yaml argocd/apps/

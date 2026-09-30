@@ -1,0 +1,8 @@
+*credentials*
+secret.yaml
+*.deb
+*.key
+*.pem
+sealed-secrets-master-key*.yaml
+.env
+ports.txt

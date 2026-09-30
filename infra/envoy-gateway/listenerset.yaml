@@ -1,0 +1,24 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: ListenerSet
+metadata:
+  name: openwebui-listeners
+  namespace: envoy-gateway-system
+spec:
+  parentRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  listeners:
+    - name: https-openwebui
+      protocol: HTTPS
+      port: 443
+      hostname: "domain.com"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: openwebui-tls-cert
+      allowedRoutes:
+        namespaces:
+          from: All

@@ -1,0 +1,13 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sealed-secrets-controller
+  namespace: kube-system
+spec:
+  podSelector:
+    matchLabels:
+      name: sealed-secrets-controller
+  policyTypes:
+    - Egress
+  egress:
+    - {}
